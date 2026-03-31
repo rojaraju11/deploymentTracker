@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Deployment Tracker</title>
+  <style>
+    /* ── Reset & Base ────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f3ff;
+      color: #2d2d2d;
+      min-height: 100vh;
+    }
+
+    /* ── Header ──────────────────────────────────────── */
+    header {
+      background: #7c3aed;
+      color: #fff;
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(124,58,237,.35);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .4px; }
+    header span.badge {
+      background: #ede9fe;
+      color: #7c3aed;
+      font-size: .7rem;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── Layout ──────────────────────────────────────── */
+    main {
+      max-width: 1100px;
+      margin: 36px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    /* ── Card ────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 2px 16px rgba(124,58,237,.10);
+      padding: 28px 24px;
+    }
+    .card h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #7c3aed;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #ede9fe;
+    }
+
+    /* ── Form ────────────────────────────────────────── */
+    form { display: flex; flex-direction: column; gap: 12px; }
+
+    label { font-size: .78rem; font-weight: 600; color: #555; margin-bottom: 2px; }
+
+    input, select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid #ddd6fe;
+      border-radius: 8px;
+      font-size: .88rem;
+      outline: none;
+      transition: border-color .2s;
+      background: #faf9ff;
+    }
+    input:focus, select:focus { border-color: #7c3aed; background: #fff; }
+
+    .form-group { display: flex; flex-direction: column; }
+
+    button[type="submit"] {
+      margin-top: 6px;
+      padding: 10px;
+      background: #7c3aed;
+      color: #fff;
+      font-size: .92rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+    button[type="submit"]:hover { background: #6d28d9; }
+    button[type="submit"]:active { transform: scale(.98); }
+
+    #form-msg {
+      font-size: .8rem;
+      min-height: 18px;
+      text-align: center;
+      font-weight: 600;
+    }
+    #form-msg.success { color: #16a34a; }
+    #form-msg.error   { color: #dc2626; }
+
+    /* ── Table Panel ─────────────────────────────────── */
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .table-header h2 { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    #refresh-btn {
+      background: #ede9fe;
+      color: #7c3aed;
+      border: none;
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    #refresh-btn:hover { background: #ddd6fe; }
+
+    .table-wrapper { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .83rem;
+    }
+    thead tr { background: #ede9fe; }
+    thead th {
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      color: #5b21b6;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #f3f0ff; transition: background .15s; }
+    tbody tr:hover { background: #faf9ff; }
+    tbody td { padding: 9px 12px; vertical-align: middle; }
+
+    .env-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .env-prod    { background: #fee2e2; color: #b91c1c; }
+    .env-staging { background: #fef9c3; color: #92400e; }
+    .env-dev     { background: #dcfce7; color: #166534; }
+    .env-default { background: #e0e7ff; color: #3730a3; }
+
+    #empty-state {
+      text-align: center;
+      padding: 40px 0;
+      color: #9ca3af;
+      font-size: .88rem;
+    }
+    #empty-state svg { display: block; margin: 0 auto 10px; opacity: .35; }
+
+    /* ── Health Bar ──────────────────────────────────── */
+    #health-bar {
+      font-size: .75rem;
+      font-weight: 600;
+      padding: 6px 32px;
+      background: #ede9fe;
+      color: #6d28d9;
+      text-align: right;
+    }
+    #health-bar span { color: #16a34a; }
+  </style>
+</head>
+<body>
+
+<div id="health-bar">API Status: <span id="health-txt">checking…</span></div>
+
+<header>
+  <svg width="26" height="26" fill="none" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#ede9fe"/><path d="M7 8h10M7 12h6M7 16h8" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round"/></svg>
+  <h1>Deployment Tracker</h1>
+  <span class="badge">Spring Boot</span>
+</header>
+
+<main>
+
+  <!-- ── Add Deployment Form ── -->
+  <div class="card">
+    <h2>➕ Add Deployment</h2>
+    <form id="deploy-form">
+      <div class="form-group">
+        <label for="serviceName">Service Name</label>
+        <input id="serviceName" type="text" placeholder="e.g. auth-service" required />
+      </div>
+      <div class="form-group">
+        <label for="imageName">Image Name</label>
+        <input id="imageName" type="text" placeholder="e.g. myrepo/auth-service" required />
+      </div>
+      <div class="form-group">
+        <label for="imageTag">Image Tag</label>
+        <input id="imageTag" type="text" placeholder="e.g. v1.4.2" required />
+      </div>
+      <div class="form-group">
+        <label for="deployedBy">Deployed By</label>
+        <input id="deployedBy" type="text" placeholder="e.g. john.doe" required />
+      </div>
+      <div class="form-group">
+        <label for="deploymentMethod">Deployment Method</label>
+        <select id="deploymentMethod">
+          <option value="">-- Select --</option>
+          <option value="Helm">Helm</option>
+          <option value="kubectl">kubectl</option>
+          <option value="ArgoCD">ArgoCD</option>
+          <option value="Jenkins">Jenkins</option>
+          <option value="Manual">Manual</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="environment">Environment</label>
+        <select id="environment">
+          <option value="">-- Select --</option>
+          <option value="dev">Dev</option>
+          <option value="staging">Staging</option>
+          <option value="prod">Production</option>
+        </select>
+      </div>
+      <p id="form-msg"></p>
+      <button type="submit">Deploy 🚀</button>
+    </form>
+  </div>
+
+  <!-- ── Deployments Table ── -->
+  <div class="card">
+    <div class="table-header">
+      <h2>📋 All Deployments</h2>
+      <button id="refresh-btn" onclick="loadDeployments()">⟳ Refresh</button>
+    </div>
+    <div class="table-wrapper">
+      <table id="deploy-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Service</th>
+            <th>Image</th>
+            <th>Tag</th>
+            <th>Environment</th>
+            <th>Method</th>
+            <th>Deployed By</th>
+            <th>Deployed At</th>
+          </tr>
+        </thead>
+        <tbody id="deploy-tbody"></tbody>
+      </table>
+      <div id="empty-state" style="display:none;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8" stroke="#7c3aed" stroke-width="1.5" stroke-linecap="round"/></svg>
+        No deployments found. Add one using the form.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  // ── Health Check ──────────────────────────────────────
+  async function checkHealth() {
+    try {
+      const res = await fetch('/deployments/health');
+      const txt = await res.text();
+      const el = document.getElementById('health-txt');
+      el.textContent = txt;
+      el.style.color = res.ok ? '#16a34a' : '#dc2626';
+    } catch {
+      document.getElementById('health-txt').textContent = 'Unreachable';
+      document.getElementById('health-txt').style.color = '#dc2626';
+    }
+  }
+
+  // ── Load All Deployments ──────────────────────────────
+  async function loadDeployments() {
+    const tbody = document.getElementById('deploy-tbody');
+    const empty = document.getElementById('empty-state');
+    try {
+      const res  = await fetch('/deployments/list');
+      const data = await res.json();
+
+      tbody.innerHTML = '';
+      if (!data || data.length === 0) {
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      data.slice().reverse().forEach((d, i) => {
+        const envClass = envBadgeClass(d.environment);
+        const row = `
+          <tr>
+            <td>${data.length - i}</td>
+            <td><strong>${esc(d.serviceName)}</strong></td>
+            <td>${esc(d.imageName)}</td>
+            <td><code>${esc(d.imageTag)}</code></td>
+            <td><span class="env-badge ${envClass}">${esc(d.environment)}</span></td>
+            <td>${esc(d.deploymentMethod)}</td>
+            <td>${esc(d.deployedBy)}</td>
+            <td>${formatDate(d.deployedAt)}</td>
+          </tr>`;
+        tbody.insertAdjacentHTML('beforeend', row);
+      });
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="8" style="color:#dc2626;text-align:center;padding:20px;">Failed to load deployments.</td></tr>`;
+    }
+  }
+
+  // ── Submit Form ───────────────────────────────────────
+  document.getElementById('deploy-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('form-msg');
+    msg.textContent = '';
+    msg.className   = '';
+
+    const payload = {
+      serviceName:      document.getElementById('serviceName').value.trim(),
+      imageName:        document.getElementById('imageName').value.trim(),
+      imageTag:         document.getElementById('imageTag').value.trim(),
+      deployedBy:       document.getElementById('deployedBy').value.trim(),
+      deploymentMethod: document.getElementById('deploymentMethod').value,
+      environment:      document.getElementById('environment').value
+    };
+
+    try {
+      const res = await fetch('/deployments/add', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload)
+      });
+      if (res.ok) {
+        msg.textContent = '✅ Deployment saved successfully!';
+        msg.className   = 'success';
+        e.target.reset();
+        loadDeployments();
+      } else {
+        msg.textContent = '❌ Server error. Please try again.';
+        msg.className   = 'error';
+      }
+    } catch {
+      msg.textContent = '❌ Network error. Is the server running?';
+      msg.className   = 'error';
+    }
+
+    setTimeout(() => { msg.textContent = ''; msg.className = ''; }, 4000);
+  });
+
+  // ── Helpers ───────────────────────────────────────────
+  function esc(val) {
+    if (!val) return '—';
+    return String(val).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function envBadgeClass(env) {
+    if (!env) return 'env-default';
+    const e = env.toLowerCase();
+    if (e === 'prod' || e === 'production') return 'env-prod';
+    if (e === 'staging')                    return 'env-staging';
+    if (e === 'dev' || e === 'development') return 'env-dev';
+    return 'env-default';
+  }
+
+  function formatDate(raw) {
+    if (!raw) return '—';
+    try {
+      const d = Array.isArray(raw)
+        ? new Date(raw[0], raw[1]-1, raw[2], raw[3]||0, raw[4]||0, raw[5]||0)
+        : new Date(raw);
+      return d.toLocaleString();
+    } catch { return String(raw); }
+  }
+
+  // ── Init ──────────────────────────────────────────────
+  checkHealth();
+  loadDeployments();
+</script>
+</body>
+</html>
+
